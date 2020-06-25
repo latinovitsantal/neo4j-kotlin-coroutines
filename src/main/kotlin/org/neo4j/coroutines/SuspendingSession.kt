@@ -4,6 +4,7 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.future.asCompletableFuture
 import kotlinx.coroutines.future.await
+import kotlinx.coroutines.future.future
 import org.intellij.lang.annotations.Language
 import org.neo4j.driver.Bookmark
 import org.neo4j.driver.Query
@@ -32,32 +33,16 @@ class SuspendingSession(val asyncSession: AsyncSession) {
 
 
     suspend fun <T> readTransaction(action: suspend SuspendingTransaction.() -> T): T =
-        coroutineScope {
-            asyncSession.readTransactionAsync {
-                async { action(it.suspending()) }.asCompletableFuture()
-            }.await()
-        }
+        coroutineScope { asyncSession.readTransactionAsync { future { action(it.suspending()) } }.await() }
 
     suspend fun <T> readTransaction(config: TransactionConfig, action: suspend SuspendingTransaction.() -> T): T =
-        coroutineScope {
-            asyncSession.readTransactionAsync({
-                async { action(it.suspending()) }.asCompletableFuture()
-            }, config).await()
-        }
+        coroutineScope { asyncSession.readTransactionAsync({ future { action(it.suspending()) } }, config).await() }
 
     suspend fun <T> writeTransaction(action: suspend SuspendingTransaction.() -> T): T =
-        coroutineScope {
-            asyncSession.writeTransactionAsync {
-                async { action(it.suspending()) }.asCompletableFuture()
-            }.await()
-        }
+        coroutineScope { asyncSession.writeTransactionAsync { future { action(it.suspending()) } }.await() }
 
     suspend fun <T> writeTransaction(config: TransactionConfig, action: suspend SuspendingTransaction.() -> T): T =
-        coroutineScope {
-            asyncSession.writeTransactionAsync({
-                async { action(it.suspending()) }.asCompletableFuture()
-            }, config).await()
-        }
+        coroutineScope { asyncSession.writeTransactionAsync({ future { action(it.suspending()) } }, config).await() }
 
     suspend fun run(@Language("Cypher") query: String, config: TransactionConfig): ResultCursor =
         asyncSession.runAsync(query, config).await()
